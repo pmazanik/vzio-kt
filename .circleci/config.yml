@@ -352,7 +352,8 @@ workflows:
           name: terraform_plan-dev
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
-          #context:
+          context:
+            - AWS_SETTINGS
             #- aws-vizio-cms-dev
           requires:
             - test
