@@ -136,10 +136,10 @@ commands:
           #command: |
           #  terraform apply -auto-approve ../workspace/.tfplan
           #  terraform output -json > ../workspace/output.json
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - output.json
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - output.json
 
 jobs:
   init_workflow:
@@ -293,6 +293,8 @@ jobs:
       STAGE: << parameters.stage >>
     steps:
       - slack_dummy
+      - aws-cli/setup:
+          profile-name: default
       #- prepare_slack
       - checkout
       - terraform_init
