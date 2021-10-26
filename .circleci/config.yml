@@ -5,18 +5,9 @@ parameters:
     type: string
     default: consent-management-service
   # EPAM single account for all environments
-  int-dev-role-arn:
+  dev-role-arn:
     type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-staging-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-prod-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-v1-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
+    default: "arn:aws:iam::724755082809:role/VZIO-S3"
 
 orbs:
   aws-cli: circleci/aws-cli@1.3.0
@@ -27,12 +18,12 @@ executors:
       - image: circleci/node:14
     working_directory: ~/workspace
 
-  terraform:
-    docker:
-      - image: hashicorp/terraform:0.13.4
-    working_directory: ~/workspace
-
 commands:
+  slack_dummy:
+    description: "Just a slack dummy"
+    steps:
+      - run: echo "Slack time."
+
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
     steps:
@@ -46,9 +37,12 @@ commands:
       - run:
           name: Fetch GitHub credentials
           command: |
-            GITHUB_AUTH=$(aws secretsmanager get-secret-value --secret-id ci/consent-management-service/github)
-            GITHUB_TOKEN=$(echo $GITHUB_AUTH | jq -r '.SecretString | fromjson | .access_token')
-            echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" >> ./workspace/env.sh
+            echo "GitHub time."
+            echo $(pwd)
+          #command: |
+          #  GITHUB_AUTH=$(aws secretsmanager get-secret-value --secret-id ci/consent-management-service/github)
+          #  GITHUB_TOKEN=$(echo $GITHUB_AUTH | jq -r '.SecretString | fromjson | .access_token')
+          #  echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" >> ./workspace/env.sh
 
       - run:
           name: Create BUILD_VERSION
@@ -82,12 +76,12 @@ commands:
     description: "restore_cache, npm ci, save_cache"
     steps:
       - restore_cache:
-          key: npm-cache-{{ checksum "package-lock.json" }}
+          key: npm-cache-{{ checksum "package.json" }}
       - run: |
           rm -rf node_modules
           npm install
       - save_cache:
-          key: npm-cache-{{ checksum "package-lock.json" }}
+          key: npm-cache-{{ checksum "package.json" }}
           paths:
             - ~/.npm
 
@@ -100,13 +94,9 @@ commands:
       - run:
           name: Assume Role
           command: |
-            ROLE_JSON=$(aws sts assume-role --role-arn "<< parameters.role_arn >>" --role-session-name "circleci-deployment-session")
-            ROLE_ACCESS_KEY_ID=$(echo $ROLE_JSON | jq -r '.Credentials.AccessKeyId')
-            ROLE_SECRET_ACCESS_KEY=$(echo $ROLE_JSON | jq -r '.Credentials.SecretAccessKey')
-            ROLE_SESSION_TOKEN=$(echo $ROLE_JSON | jq -r '.Credentials.SessionToken')
             echo "export AWS_ACCESS_KEY_ID=${ROLE_ACCESS_KEY_ID}" >> $BASH_ENV
             echo "export AWS_SECRET_ACCESS_KEY=${ROLE_SECRET_ACCESS_KEY}" >> $BASH_ENV
-            echo "export AWS_SESSION_TOKEN=${ROLE_SESSION_TOKEN}" >> $BASH_ENV
+            echo "export AWS_DEFAULT_REGION=${ROLE_AWS_REGION}" >> $BASH_ENV
 
   terraform_init:
     steps:
@@ -114,11 +104,8 @@ commands:
           name: Initialize Terraform
           working_directory: terraform
           command: |
-            terraform init -input=false \
-              -backend-config="bucket=$TF_STATE_BUCKET" \
-              -backend-config="region=$TF_STATE_BUCKET_REGION" \
-              -backend-config="key=${STAGE}/<< pipeline.parameters.service-id >>/terraform.tfstate" \
-              -force-copy
+            echo "Using 'aws s3 ls' instead of Terraform to test AWS CREDS"
+            aws s3 ls
 
   terraform_plan:
     parameters:
@@ -128,14 +115,15 @@ commands:
       - run: mkdir -p workspace
       - run:
           name: Plan Terraform changes
-          command: terraform plan -input=false -var-file="stages/${STAGE}.tfvars" -out ../workspace/.tfplan
+          command: echo "Terraform time (PLAN stage). Printing parameter 'role_arn' ${TF_VAR_service_role_arn}"
+          #command: terraform plan -input=false -var-file="stages/${STAGE}.tfvars" -out ../workspace/.tfplan
           working_directory: terraform
           environment:
             TF_VAR_service_role_arn: << parameters.role_arn >>
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - .tfplan
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - .tfplan
 
   terraform_apply:
     steps:
@@ -144,13 +132,14 @@ commands:
       - run:
           name: Apply Terraform changes
           working_directory: terraform
-          command: |
-            terraform apply -auto-approve ../workspace/.tfplan
-            terraform output -json > ../workspace/output.json
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - output.json
+          command: echo "Terraform time (APPLY and OUTPUT stage)"
+          #command: |
+          #  terraform apply -auto-approve ../workspace/.tfplan
+          #  terraform output -json > ../workspace/output.json
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - output.json
 
 jobs:
   init_workflow:
@@ -162,10 +151,12 @@ jobs:
       STAGE: << parameters.stage >>
     executor: node
     steps:
-      - aws-cli/setup
+      - aws-cli/setup:
+          profile-name: default
       - configure_environment
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   test:
     executor: node
@@ -173,13 +164,16 @@ jobs:
       - prepare_job
       - install_dependencies
       - run: npm audit --production || echo 'NPM Audit failed'
-      - run: npm run lint
+      - run: echo "Lint testing time"
+      #- run: npm run lint
       - run:
           name: Run Tests
           no_output_timeout: 1m
-          command: npm run test
-      - slack/status:
-          fail_only: true
+          command: echo "doing npm run test"
+          #command: npm run test
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   package_service-feature_branch:
     executor: node
@@ -189,14 +183,16 @@ jobs:
         type: string
         default: "dev"
     steps:
-      - prepare_job
-      - install_dependencies
-      - run:
-          command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: us-east-1
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
+      #- run:
+      #    command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: eu-central-1
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
 
   package_service:
     executor: node
@@ -209,30 +205,40 @@ jobs:
         type: string
         default: "true"
     steps:
-      - prepare_job
-      - install_dependencies
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
+      - run: 
+          name: echo parameters.stage
+          command: echo << parameters.stage >>
       - run:
-          command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: us-east-1
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
-      - run: mkdir -p workspace artifacts
-      - run: cp -r package workspace/
-      - run:
-          name: Add fulfillment package to /artifacts
-          command: tar -zcvf ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip ./workspace/package/<< parameters.stage >>
-      - run:
-          name: Create GitHub release and upload artifact
-          command: ./tools/create-github-release.sh ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip << parameters.prerelease >>
-      - store_artifacts:
-          path: artifacts
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - package
-      - slack/status:
-          fail_only: true
+          name: echo parameters.prerelease 
+          command: echo << parameters.prerelease >>
+
+      #- run:
+      #    command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: eu-central-1
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
+      #- run: mkdir -p workspace artifacts
+      #- run: cp -r package workspace/
+      #- run:
+      #    name: Add fulfillment package to /artifacts
+      #    command: tar -zcvf ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip ./workspace/package/<< parameters.stage >>
+      #- run:
+      #    name: Create GitHub release and upload artifact
+      #    command: ./tools/create-github-release.sh ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip << parameters.prerelease >>
+      #- store_artifacts:
+      #    path: artifacts
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - package
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   deploy_service:
     executor: node
@@ -243,107 +249,90 @@ jobs:
         default: dev
       region:
         type: string
-        default: us-east-1
+        default: eu-central-1
       role_arn:
         type: string
     steps:
-      - prepare_job
-      - install_dependencies
-      - aws-cli/setup
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
+      - aws-cli/setup:
+          profile-name: default
       - assume_role:
           role_arn: << parameters.role_arn >>
-      - run:
-          command: npm run deploy -- --package ./workspace/package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: << parameters.region >>
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
-
-  # functional_test:
-  #   executor: node
-  #   description: "Deploys the service with stage"
-  #   parameters:
-  #     stage:
-  #       type: string
-  #       default: dev
-  #     region:
-  #       type: string
-  #       default: us-east-1
-  #     role_arn:
-  #       type: string
-  #   steps:
-  #     - prepare_job
-  #     - install_dependencies
-  #     - aws-cli/setup
-  #     - assume_role:
-  #         role_arn: << parameters.role_arn >>
-  #     - run:
-  #         command: npm run test:functional
-  #         environment:
-  #           STAGE: << parameters.stage >>
-  #           REGION: << parameters.region >>
-  #     - slack/status:
-  #         fail_only: true
+      - run: echo "executing npm run deploy -- --package ./workspace/package/<< parameters.stage >> "
+      #- run:
+      #    command: npm run deploy -- --package ./workspace/package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: << parameters.region >>
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
 
   workflow_success:
     executor: node
     steps:
-      - slack/status
+      - slack_dummy
+      #- slack/status
 
   terraform_plan:
-    executor: terraform
+    executor: node
     parameters:
       stage:
         type: string
       region:
         type: string
-        default: us-east-1
+        default: eu-central-1
       role_arn:
         type: string
     environment:
       STAGE: << parameters.stage >>
       REGION: << parameters.region >>
     steps:
-      - prepare_slack
+      - slack_dummy
+      - aws-cli/setup:
+          profile-name: default
       - prepare_job
       - terraform_init
       - terraform_plan:
           role_arn: << parameters.role_arn >>
-      - slack/status:
-          fail_only: true
+      - slack_dummy
 
   terraform_apply:
-    executor: terraform
+    executor: node
     parameters:
       stage:
         type: string
     environment:
       STAGE: << parameters.stage >>
     steps:
-      - prepare_slack
+      - slack_dummy
+      - aws-cli/setup:
+          profile-name: default
+      #- prepare_slack
       - checkout
       - terraform_init
       - terraform_apply
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
 workflows:
   feature_branch:
     jobs:
       - init_workflow:
           context:
-            - aws-vizio-privacy
+            - AWS_SETTINGS
+            #- aws-vizio-privacy
           filters:
             branches:
               ignore:
                 - dev
                 - master
-                - v1
-                - staging
 
       - test:
-          context:
-            - aws-vizio-privacy
+          #context:
+            #- aws-vizio-privacy
           requires:
             - init_workflow
 
@@ -353,198 +342,25 @@ workflows:
 
       - workflow_success:
           name: worflow_finish_notification-feature_branch
-          context:
-            - aws-vizio-privacy
+          #context:
+            #- aws-vizio-privacy
           requires:
             - package_service-feature_branch
-
-  int-dev:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-dev
-          filters:
-            branches:
-                only:
-                  - dev
-
-      - test:
-          context:
-            - aws-vizio-platform
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-dev
-          stage: int-dev
-          role_arn: << pipeline.parameters.int-dev-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-dev
-          stage: int-dev
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-dev
-
-      - package_service:
-          name: package_service-int-dev
-          stage: int-dev
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-dev
-
-      - deploy_service:
-          name: deploy_service-int-dev
-          stage: int-dev
-          role_arn: << pipeline.parameters.int-dev-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-dev
-
-      # - functional_test:
-      #     stage: int-dev
-      #     role_arn: << pipeline.parameters.int-dev-role-arn >>
-      #     context:
-      #       - aws-vizio-privacy
-      #     requires:
-      #       - deploy_service-int-dev
-
-      - workflow_success:
-          name: worflow_finish_notification-int-dev
-          requires:
-            - deploy_service-int-dev
-
-  int-staging:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-staging
-          filters:
-            branches:
-              only: staging #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-staging
-          stage: int-staging
-          role_arn: << pipeline.parameters.int-staging-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-staging
-          stage: int-staging
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-staging
-
-      - package_service:
-          name: package_service-int-staging
-          stage: int-staging
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-staging
-
-      - deploy_service:
-          name: deploy_service-int-staging
-          stage: int-staging
-          role_arn: << pipeline.parameters.int-staging-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-staging
-
-      - workflow_success:
-          name: worflow_finish_notification-int-staging
-          requires:
-            - deploy_service-int-staging
-
-  int-prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-prod
-          stage: int-prod
-          role_arn: << pipeline.parameters.int-prod-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-prod
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-prod
-
-      - package_service:
-          name: package_service-int-prod
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-prod
-
-      - deploy_service:
-          name: deploy_service-int-prod
-          role_arn: << pipeline.parameters.int-prod-role-arn >>
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-prod
-
-      - workflow_success:
-          name: worflow_finish_notification-int-prod
-          requires:
-            - deploy_service-int-prod
 
   dev:
     jobs:
       - init_workflow:
           context:
-            - aws-vizio-cms-dev
+            - AWS_SETTINGS
+            #- aws-vizio-cms-dev
           stage: dev
           filters:
             branches:
-              only: master #Source git branch
+              only: dev #Source git branch
 
       - test:
-          context:
-            - aws-vizio-cms-dev
+          #context:
+            #- aws-vizio-cms-dev
           requires:
             - init_workflow
 
@@ -553,7 +369,8 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
-            - aws-vizio-cms-dev
+            - AWS_SETTINGS
+            #- aws-vizio-cms-dev
           requires:
             - test
 
@@ -561,15 +378,16 @@ workflows:
           name: terraform_apply-dev
           stage: dev
           context:
-            - aws-vizio-cms-dev
+            - AWS_SETTINGS
+            #- aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
 
       - package_service:
           name: package_service-dev
           stage: dev
-          context:
-            - aws-vizio-cms-dev
+          #context:
+            #- aws-vizio-cms-dev
           requires:
             - terraform_apply-dev
 
@@ -578,7 +396,8 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
-            - aws-vizio-cms-dev
+            - AWS_SETTINGS
+            #- aws-vizio-cms-dev
           requires:
             - package_service-dev
 
@@ -586,263 +405,3 @@ workflows:
           name: worflow_finish_notification-dev
           requires:
             - deploy_service-dev
-
-  stage:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-stage
-          stage: stage
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-stage
-          stage: stage
-          role_arn: << pipeline.parameters.stage-role-arn >>
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-stage
-
-      - terraform_apply:
-          name: terraform_apply-stage
-          stage: stage
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-stage
-          stage: stage
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - terraform_apply-stage
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-stage
-
-      - deploy_service:
-          name: deploy_service-stage
-          stage: stage
-          role_arn: << pipeline.parameters.stage-role-arn >>
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-stage
-          requires:
-            - deploy_service-stage
-
-  pre-prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-pre-prod
-          stage: pre-prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-pre-prod
-          stage: pre-prod
-          role_arn: << pipeline.parameters.pre-prod-role-arn >>
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-pre-prod
-
-      - terraform_apply:
-          name: terraform_apply-pre-prod
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-pre-prod
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - terraform_apply-pre-prod
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-pre-prod
-
-      - deploy_service:
-          name: deploy_service-pre-prod
-          role_arn: << pipeline.parameters.pre-prod-role-arn >>
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-pre-prod
-          requires:
-            - deploy_service-pre-prod
-
-  prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-prod
-          stage: prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-prod
-          stage: prod
-          role_arn: << pipeline.parameters.prod-role-arn >>
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-prod
-
-      - terraform_apply:
-          name: terraform_apply-prod
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-prod
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - terraform_apply-prod
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-prod
-
-      - deploy_service:
-          name: deploy_service-prod
-          role_arn: << pipeline.parameters.prod-role-arn >>
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-prod
-          requires:
-            - deploy_service-prod
-
-  int-v1:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-v1
-          filters:
-            branches:
-              only: v1 #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-v1
-          stage: int-v1
-          role_arn: << pipeline.parameters.int-v1-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-int-v1
-
-      - terraform_apply:
-          name: terraform_apply-int-v1
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-int-v1
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-v1
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-int-v1
-
-      - deploy_service:
-          name: deploy_service-int-v1
-          role_arn: << pipeline.parameters.int-v1-role-arn >>
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-int-v1
-          requires:
-            - deploy_service-int-v1
