@@ -5,16 +5,7 @@ parameters:
     type: string
     default: consent-management-service
   # EPAM single account for all environments
-  int-dev-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-staging-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-prod-role-arn:
-    type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
-  int-v1-role-arn:
+  dev-role-arn:
     type: string
     default: "arn:aws:iam::217687602046:role/cicd"
 
