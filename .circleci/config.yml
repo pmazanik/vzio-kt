@@ -18,17 +18,11 @@ executors:
       - image: circleci/node:14
     working_directory: ~/workspace
 
-  terraform:
-    docker:
-      - image: hashicorp/terraform:0.13.4
-    working_directory: ~/workspace
-
 commands:
   slack_dummy:
     description: "Just a slack dummy"
     steps:
-      - run: SLACK_ID=${SLACK_ID}
-      - run: echo "Slack time. Using context VAR - $SLACK_ID"
+      - run: echo "Slack time."
 
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
@@ -82,12 +76,12 @@ commands:
     description: "restore_cache, npm ci, save_cache"
     steps:
       - restore_cache:
-          key: npm-cache-{{ checksum "package-lock.json" }}
+          key: npm-cache-{{ checksum "package.json" }}
       - run: |
           rm -rf node_modules
           npm install
       - save_cache:
-          key: npm-cache-{{ checksum "package-lock.json" }}
+          key: npm-cache-{{ checksum "package.json" }}
           paths:
             - ~/.npm
 
@@ -268,13 +262,13 @@ jobs:
       #- slack/status
 
   terraform_plan:
-    executor: terraform
+    executor: node
     parameters:
       stage:
         type: string
       region:
         type: string
-        default: us-east-1
+        default: eu-central-1
       role_arn:
         type: string
     environment:
@@ -292,7 +286,7 @@ jobs:
       #    fail_only: true
 
   terraform_apply:
-    executor: terraform
+    executor: node
     parameters:
       stage:
         type: string
@@ -313,7 +307,6 @@ workflows:
     jobs:
       - init_workflow:
           context:
-            - SLACK_CONTEXT
             - AWS_SETTINGS
             #- aws-vizio-privacy
           filters:
@@ -324,7 +317,6 @@ workflows:
 
       - test:
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-privacy
           requires:
             - init_workflow
@@ -336,7 +328,6 @@ workflows:
       - workflow_success:
           name: worflow_finish_notification-feature_branch
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-privacy
           requires:
             - package_service-feature_branch
@@ -345,7 +336,6 @@ workflows:
     jobs:
       - init_workflow:
           context:
-            - SLACK_CONTEXT
             - AWS_SETTINGS
             #- aws-vizio-cms-dev
           stage: dev
@@ -355,7 +345,6 @@ workflows:
 
       - test:
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-cms-dev
           requires:
             - init_workflow
@@ -365,7 +354,6 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-cms-dev
           requires:
             - test
@@ -374,7 +362,6 @@ workflows:
           name: terraform_apply-dev
           stage: dev
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
@@ -383,7 +370,6 @@ workflows:
           name: package_service-dev
           stage: dev
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-cms-dev
           requires:
             - terraform_apply-dev
@@ -393,7 +379,6 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
-            - SLACK_CONTEXT
             #- aws-vizio-cms-dev
           requires:
             - package_service-dev
