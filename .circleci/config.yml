@@ -43,6 +43,7 @@ commands:
           name: Fetch GitHub credentials
           command: |
             echo "GitHub time."
+            echo $(pwd)
           #command: |
           #  GITHUB_AUTH=$(aws secretsmanager get-secret-value --secret-id ci/consent-management-service/github)
           #  GITHUB_TOKEN=$(echo $GITHUB_AUTH | jq -r '.SecretString | fromjson | .access_token')
@@ -155,7 +156,8 @@ jobs:
       STAGE: << parameters.stage >>
     executor: node
     steps:
-      - aws-cli/setup
+      - aws-cli/setup:
+          profile-name: default
       - configure_environment
       - slack_dummy
       #- slack/status:
@@ -245,7 +247,8 @@ jobs:
     steps:
       - prepare_job
       - install_dependencies
-      - aws-cli/setup
+      - aws-cli/setup:
+          profile-name: default
       - assume_role:
           role_arn: << parameters.role_arn >>
       - run:
@@ -308,6 +311,7 @@ workflows:
       - init_workflow:
           context:
             - SLACK_CONTEXT
+            - AWS_SETTINGS
             - aws-vizio-privacy
           filters:
             branches:
@@ -339,6 +343,7 @@ workflows:
       - init_workflow:
           context:
             - SLACK_CONTEXT
+            - AWS_SETTINGS
             - aws-vizio-cms-dev
           stage: dev
           filters:
