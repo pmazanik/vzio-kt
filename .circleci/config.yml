@@ -316,7 +316,7 @@ workflows:
                 - master
 
       - test:
-          context:
+          #context:
             #- aws-vizio-privacy
           requires:
             - init_workflow
@@ -327,7 +327,7 @@ workflows:
 
       - workflow_success:
           name: worflow_finish_notification-feature_branch
-          context:
+          #context:
             #- aws-vizio-privacy
           requires:
             - package_service-feature_branch
@@ -344,7 +344,7 @@ workflows:
               only: dev #Source git branch
 
       - test:
-          context:
+          #context:
             #- aws-vizio-cms-dev
           requires:
             - init_workflow
@@ -353,7 +353,7 @@ workflows:
           name: terraform_plan-dev
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
-          context:
+          #context:
             #- aws-vizio-cms-dev
           requires:
             - test
@@ -361,7 +361,7 @@ workflows:
       - terraform_apply:
           name: terraform_apply-dev
           stage: dev
-          context:
+          #context:
             #- aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
@@ -369,7 +369,7 @@ workflows:
       - package_service:
           name: package_service-dev
           stage: dev
-          context:
+          #context:
             #- aws-vizio-cms-dev
           requires:
             - terraform_apply-dev
@@ -378,7 +378,7 @@ workflows:
           name: deploy_service-dev
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
-          context:
+          #context:
             #- aws-vizio-cms-dev
           requires:
             - package_service-dev
