@@ -7,7 +7,7 @@ parameters:
   # EPAM single account for all environments
   dev-role-arn:
     type: string
-    default: "arn:aws:iam::217687602046:role/cicd"
+    default: "arn:aws:iam::724755082809:role/VZIO-S3"
 
 orbs:
   aws-cli: circleci/aws-cli@1.3.0
@@ -42,9 +42,11 @@ commands:
       - run:
           name: Fetch GitHub credentials
           command: |
-            GITHUB_AUTH=$(aws secretsmanager get-secret-value --secret-id ci/consent-management-service/github)
-            GITHUB_TOKEN=$(echo $GITHUB_AUTH | jq -r '.SecretString | fromjson | .access_token')
-            echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" >> ./workspace/env.sh
+            echo "GitHub time."
+          #command: |
+          #  GITHUB_AUTH=$(aws secretsmanager get-secret-value --secret-id ci/consent-management-service/github)
+          #  GITHUB_TOKEN=$(echo $GITHUB_AUTH | jq -r '.SecretString | fromjson | .access_token')
+          #  echo "export GITHUB_TOKEN=${GITHUB_TOKEN}" >> ./workspace/env.sh
 
       - run:
           name: Create BUILD_VERSION
@@ -96,13 +98,9 @@ commands:
       - run:
           name: Assume Role
           command: |
-            ROLE_JSON=$(aws sts assume-role --role-arn "<< parameters.role_arn >>" --role-session-name "circleci-deployment-session")
-            ROLE_ACCESS_KEY_ID=$(echo $ROLE_JSON | jq -r '.Credentials.AccessKeyId')
-            ROLE_SECRET_ACCESS_KEY=$(echo $ROLE_JSON | jq -r '.Credentials.SecretAccessKey')
-            ROLE_SESSION_TOKEN=$(echo $ROLE_JSON | jq -r '.Credentials.SessionToken')
             echo "export AWS_ACCESS_KEY_ID=${ROLE_ACCESS_KEY_ID}" >> $BASH_ENV
             echo "export AWS_SECRET_ACCESS_KEY=${ROLE_SECRET_ACCESS_KEY}" >> $BASH_ENV
-            echo "export AWS_SESSION_TOKEN=${ROLE_SESSION_TOKEN}" >> $BASH_ENV
+            echo "export AWS_REGION=${AWS_REGION}" >> $BASH_ENV
 
   terraform_init:
     steps:
@@ -110,11 +108,8 @@ commands:
           name: Initialize Terraform
           working_directory: terraform
           command: |
-            terraform init -input=false \
-              -backend-config="bucket=$TF_STATE_BUCKET" \
-              -backend-config="region=$TF_STATE_BUCKET_REGION" \
-              -backend-config="key=${STAGE}/<< pipeline.parameters.service-id >>/terraform.tfstate" \
-              -force-copy
+            echo "Using 'aws s3 ls' instead of Terraform to test AWS CREDS"
+            aws s3 ls
 
   terraform_plan:
     parameters:
@@ -124,7 +119,8 @@ commands:
       - run: mkdir -p workspace
       - run:
           name: Plan Terraform changes
-          command: terraform plan -input=false -var-file="stages/${STAGE}.tfvars" -out ../workspace/.tfplan
+          command: echo "Terraform time (PLAN stage). Printing parameter 'role_arn' ${TF_VAR_service_role_arn}"
+          #command: terraform plan -input=false -var-file="stages/${STAGE}.tfvars" -out ../workspace/.tfplan
           working_directory: terraform
           environment:
             TF_VAR_service_role_arn: << parameters.role_arn >>
@@ -140,9 +136,10 @@ commands:
       - run:
           name: Apply Terraform changes
           working_directory: terraform
-          command: |
-            terraform apply -auto-approve ../workspace/.tfplan
-            terraform output -json > ../workspace/output.json
+          command: echo "Terraform time (APPLY and OUTPUT stage)"
+          #command: |
+          #  terraform apply -auto-approve ../workspace/.tfplan
+          #  terraform output -json > ../workspace/output.json
       - persist_to_workspace:
           root: workspace
           paths:
