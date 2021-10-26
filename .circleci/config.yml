@@ -276,14 +276,13 @@ jobs:
       REGION: << parameters.region >>
     steps:
       - slack_dummy
-      #- prepare_slack
+      - aws-cli/setup:
+          profile-name: default
       - prepare_job
       - terraform_init
       - terraform_plan:
           role_arn: << parameters.role_arn >>
       - slack_dummy
-      #- slack/status:
-      #    fail_only: true
 
   terraform_apply:
     executor: node
