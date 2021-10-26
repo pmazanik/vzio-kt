@@ -120,10 +120,10 @@ commands:
           working_directory: terraform
           environment:
             TF_VAR_service_role_arn: << parameters.role_arn >>
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - .tfplan
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - .tfplan
 
   terraform_apply:
     steps:
