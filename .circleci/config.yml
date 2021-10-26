@@ -312,7 +312,7 @@ workflows:
           context:
             - SLACK_CONTEXT
             - AWS_SETTINGS
-            - aws-vizio-privacy
+            #- aws-vizio-privacy
           filters:
             branches:
               ignore:
@@ -322,7 +322,7 @@ workflows:
       - test:
           context:
             - SLACK_CONTEXT
-            - aws-vizio-privacy
+            #- aws-vizio-privacy
           requires:
             - init_workflow
 
@@ -334,7 +334,7 @@ workflows:
           name: worflow_finish_notification-feature_branch
           context:
             - SLACK_CONTEXT
-            - aws-vizio-privacy
+            #- aws-vizio-privacy
           requires:
             - package_service-feature_branch
 
@@ -344,7 +344,7 @@ workflows:
           context:
             - SLACK_CONTEXT
             - AWS_SETTINGS
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           stage: dev
           filters:
             branches:
@@ -353,7 +353,7 @@ workflows:
       - test:
           context:
             - SLACK_CONTEXT
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           requires:
             - init_workflow
 
@@ -363,7 +363,7 @@ workflows:
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
             - SLACK_CONTEXT
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           requires:
             - test
 
@@ -372,7 +372,7 @@ workflows:
           stage: dev
           context:
             - SLACK_CONTEXT
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
 
@@ -381,7 +381,7 @@ workflows:
           stage: dev
           context:
             - SLACK_CONTEXT
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           requires:
             - terraform_apply-dev
 
@@ -391,7 +391,7 @@ workflows:
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
             - SLACK_CONTEXT
-            - aws-vizio-cms-dev
+            #- aws-vizio-cms-dev
           requires:
             - package_service-dev
 
