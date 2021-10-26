@@ -101,7 +101,7 @@ commands:
           command: |
             echo "export AWS_ACCESS_KEY_ID=${ROLE_ACCESS_KEY_ID}" >> $BASH_ENV
             echo "export AWS_SECRET_ACCESS_KEY=${ROLE_SECRET_ACCESS_KEY}" >> $BASH_ENV
-            echo "export AWS_REGION=${ROLE_AWS_REGION}" >> $BASH_ENV
+            echo "export AWS_DEFAULT_REGION=${ROLE_AWS_REGION}" >> $BASH_ENV
 
   terraform_init:
     steps:
