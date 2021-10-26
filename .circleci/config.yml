@@ -33,6 +33,9 @@ executors:
     working_directory: ~/workspace
 
 commands:
+  slack_dummy:
+      - run: echo "Slack time. Using context VAR: ${SLACK_ID}"
+
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
     steps:
@@ -164,8 +167,9 @@ jobs:
     steps:
       - aws-cli/setup
       - configure_environment
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   test:
     executor: node
@@ -178,8 +182,9 @@ jobs:
           name: Run Tests
           no_output_timeout: 1m
           command: npm run test
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   package_service-feature_branch:
     executor: node
@@ -231,8 +236,9 @@ jobs:
           root: workspace
           paths:
             - package
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   deploy_service:
     executor: node
@@ -259,36 +265,11 @@ jobs:
             REGION: << parameters.region >>
             SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
 
-  # functional_test:
-  #   executor: node
-  #   description: "Deploys the service with stage"
-  #   parameters:
-  #     stage:
-  #       type: string
-  #       default: dev
-  #     region:
-  #       type: string
-  #       default: us-east-1
-  #     role_arn:
-  #       type: string
-  #   steps:
-  #     - prepare_job
-  #     - install_dependencies
-  #     - aws-cli/setup
-  #     - assume_role:
-  #         role_arn: << parameters.role_arn >>
-  #     - run:
-  #         command: npm run test:functional
-  #         environment:
-  #           STAGE: << parameters.stage >>
-  #           REGION: << parameters.region >>
-  #     - slack/status:
-  #         fail_only: true
-
   workflow_success:
     executor: node
     steps:
-      - slack/status
+      - slack_dummy
+      #- slack/status
 
   terraform_plan:
     executor: terraform
@@ -304,13 +285,15 @@ jobs:
       STAGE: << parameters.stage >>
       REGION: << parameters.region >>
     steps:
-      - prepare_slack
+      - slack_dummy
+      #- prepare_slack
       - prepare_job
       - terraform_init
       - terraform_plan:
           role_arn: << parameters.role_arn >>
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
   terraform_apply:
     executor: terraform
@@ -320,12 +303,14 @@ jobs:
     environment:
       STAGE: << parameters.stage >>
     steps:
-      - prepare_slack
+      - slack_dummy
+      #- prepare_slack
       - checkout
       - terraform_init
       - terraform_apply
-      - slack/status:
-          fail_only: true
+      - slack_dummy
+      #- slack/status:
+      #    fail_only: true
 
 workflows:
   feature_branch:
@@ -338,8 +323,6 @@ workflows:
               ignore:
                 - dev
                 - master
-                - v1
-                - staging
 
       - test:
           context:
@@ -358,180 +341,6 @@ workflows:
           requires:
             - package_service-feature_branch
 
-  int-dev:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-dev
-          filters:
-            branches:
-                only:
-                  - dev
-
-      - test:
-          context:
-            - aws-vizio-platform
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-dev
-          stage: int-dev
-          role_arn: << pipeline.parameters.int-dev-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-dev
-          stage: int-dev
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-dev
-
-      - package_service:
-          name: package_service-int-dev
-          stage: int-dev
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-dev
-
-      - deploy_service:
-          name: deploy_service-int-dev
-          stage: int-dev
-          role_arn: << pipeline.parameters.int-dev-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-dev
-
-      # - functional_test:
-      #     stage: int-dev
-      #     role_arn: << pipeline.parameters.int-dev-role-arn >>
-      #     context:
-      #       - aws-vizio-privacy
-      #     requires:
-      #       - deploy_service-int-dev
-
-      - workflow_success:
-          name: worflow_finish_notification-int-dev
-          requires:
-            - deploy_service-int-dev
-
-  int-staging:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-staging
-          filters:
-            branches:
-              only: staging #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-staging
-          stage: int-staging
-          role_arn: << pipeline.parameters.int-staging-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-staging
-          stage: int-staging
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-staging
-
-      - package_service:
-          name: package_service-int-staging
-          stage: int-staging
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-staging
-
-      - deploy_service:
-          name: deploy_service-int-staging
-          stage: int-staging
-          role_arn: << pipeline.parameters.int-staging-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-staging
-
-      - workflow_success:
-          name: worflow_finish_notification-int-staging
-          requires:
-            - deploy_service-int-staging
-
-  int-prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-prod
-          stage: int-prod
-          role_arn: << pipeline.parameters.int-prod-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - terraform_apply:
-          name: terraform_apply-int-prod
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_plan-int-prod
-
-      - package_service:
-          name: package_service-int-prod
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-prod
-
-      - deploy_service:
-          name: deploy_service-int-prod
-          role_arn: << pipeline.parameters.int-prod-role-arn >>
-          stage: int-prod
-          context:
-            - aws-vizio-privacy
-          requires:
-            - package_service-int-prod
-
-      - workflow_success:
-          name: worflow_finish_notification-int-prod
-          requires:
-            - deploy_service-int-prod
-
   dev:
     jobs:
       - init_workflow:
@@ -540,7 +349,7 @@ workflows:
           stage: dev
           filters:
             branches:
-              only: master #Source git branch
+              only: dev #Source git branch
 
       - test:
           context:
@@ -586,263 +395,3 @@ workflows:
           name: worflow_finish_notification-dev
           requires:
             - deploy_service-dev
-
-  stage:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-stage
-          stage: stage
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-stage
-          stage: stage
-          role_arn: << pipeline.parameters.stage-role-arn >>
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-stage
-
-      - terraform_apply:
-          name: terraform_apply-stage
-          stage: stage
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-stage
-          stage: stage
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - terraform_apply-stage
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-stage
-
-      - deploy_service:
-          name: deploy_service-stage
-          stage: stage
-          role_arn: << pipeline.parameters.stage-role-arn >>
-          context:
-            - aws-vizio-cms-stage
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-stage
-          requires:
-            - deploy_service-stage
-
-  pre-prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-pre-prod
-          stage: pre-prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-pre-prod
-          stage: pre-prod
-          role_arn: << pipeline.parameters.pre-prod-role-arn >>
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-pre-prod
-
-      - terraform_apply:
-          name: terraform_apply-pre-prod
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-pre-prod
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - terraform_apply-pre-prod
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-pre-prod
-
-      - deploy_service:
-          name: deploy_service-pre-prod
-          role_arn: << pipeline.parameters.pre-prod-role-arn >>
-          stage: pre-prod
-          context:
-            - aws-vizio-cms-pre-prod
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-pre-prod
-          requires:
-            - deploy_service-pre-prod
-
-  prod:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-cms-prod
-          stage: prod
-          filters:
-            branches:
-              only: master #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-prod
-          stage: prod
-          role_arn: << pipeline.parameters.prod-role-arn >>
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-prod
-
-      - terraform_apply:
-          name: terraform_apply-prod
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-prod
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - terraform_apply-prod
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-prod
-
-      - deploy_service:
-          name: deploy_service-prod
-          role_arn: << pipeline.parameters.prod-role-arn >>
-          stage: prod
-          context:
-            - aws-vizio-cms-prod
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-prod
-          requires:
-            - deploy_service-prod
-
-  int-v1:
-    jobs:
-      - init_workflow:
-          context:
-            - aws-vizio-privacy
-          stage: int-v1
-          filters:
-            branches:
-              only: v1 #Source git branch
-
-      - test:
-          context:
-            - aws-vizio-privacy
-          requires:
-            - init_workflow
-
-      - terraform_plan:
-          name: terraform_plan-int-v1
-          stage: int-v1
-          role_arn: << pipeline.parameters.int-v1-role-arn >>
-          context:
-            - aws-vizio-privacy
-          requires:
-            - test
-
-      - approve_apply:
-          type: approval
-          requires:
-            - terraform_plan-int-v1
-
-      - terraform_apply:
-          name: terraform_apply-int-v1
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - approve_apply
-
-      - package_service:
-          name: package_service-int-v1
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - terraform_apply-int-v1
-
-      - approve_deploy:
-          type: approval
-          requires:
-            - package_service-int-v1
-
-      - deploy_service:
-          name: deploy_service-int-v1
-          role_arn: << pipeline.parameters.int-v1-role-arn >>
-          stage: int-v1
-          context:
-            - aws-vizio-privacy
-          requires:
-            - approve_deploy
-
-      - workflow_success:
-          name: worflow_finish_notification-int-v1
-          requires:
-            - deploy_service-int-v1
