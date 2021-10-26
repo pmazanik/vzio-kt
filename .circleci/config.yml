@@ -34,6 +34,8 @@ executors:
 
 commands:
   slack_dummy:
+    description: "Just a slack dummy"
+    steps:
       - run: echo "Slack time. Using context VAR - ${SLACK_ID}"
 
   prepare_slack:
