@@ -261,7 +261,7 @@ jobs:
           profile-name: default
       - assume_role:
           role_arn: << parameters.role_arn >>
-      - run: echo "executing npm run deploy -- --package ./workspace/package/<< parameters.stage >>
+      - run: echo "executing npm run deploy -- --package ./workspace/package/<< parameters.stage >> "
       #- run:
       #    command: npm run deploy -- --package ./workspace/package/<< parameters.stage >>/
       #    environment:
