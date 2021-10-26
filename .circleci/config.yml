@@ -249,7 +249,7 @@ jobs:
         default: dev
       region:
         type: string
-        default: us-east-1
+        default: eu-central-1
       role_arn:
         type: string
     steps:
@@ -395,7 +395,8 @@ workflows:
           name: deploy_service-dev
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
-          #context:
+          context:
+            - AWS_SETTINGS
             #- aws-vizio-cms-dev
           requires:
             - package_service-dev
