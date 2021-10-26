@@ -34,7 +34,7 @@ executors:
 
 commands:
   slack_dummy:
-      - run: echo "Slack time. Using context VAR':'' ${SLACK_ID}"
+      - run: echo "Slack time. Using context VAR - ${SLACK_ID}"
 
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
@@ -317,6 +317,7 @@ workflows:
     jobs:
       - init_workflow:
           context:
+            - SLACK_CONTEXT
             - aws-vizio-privacy
           filters:
             branches:
@@ -326,6 +327,7 @@ workflows:
 
       - test:
           context:
+            - SLACK_CONTEXT
             - aws-vizio-privacy
           requires:
             - init_workflow
@@ -337,6 +339,7 @@ workflows:
       - workflow_success:
           name: worflow_finish_notification-feature_branch
           context:
+            - SLACK_CONTEXT
             - aws-vizio-privacy
           requires:
             - package_service-feature_branch
@@ -345,6 +348,7 @@ workflows:
     jobs:
       - init_workflow:
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           stage: dev
           filters:
@@ -353,6 +357,7 @@ workflows:
 
       - test:
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           requires:
             - init_workflow
@@ -362,6 +367,7 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           requires:
             - test
@@ -370,6 +376,7 @@ workflows:
           name: terraform_apply-dev
           stage: dev
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
@@ -378,6 +385,7 @@ workflows:
           name: package_service-dev
           stage: dev
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           requires:
             - terraform_apply-dev
@@ -387,6 +395,7 @@ workflows:
           stage: dev
           role_arn: << pipeline.parameters.dev-role-arn >>
           context:
+            - SLACK_CONTEXT
             - aws-vizio-cms-dev
           requires:
             - package_service-dev
