@@ -27,7 +27,8 @@ commands:
   slack_dummy:
     description: "Just a slack dummy"
     steps:
-      - run: echo "Slack time. Using context VAR - ${SLACK_ID}"
+      - run: SLACK_ID=${SLACK_ID}
+      - run: echo "Slack time. Using context VAR - $SLACK_ID"
 
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
