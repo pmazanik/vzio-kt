@@ -183,14 +183,16 @@ jobs:
         type: string
         default: "dev"
     steps:
-      - prepare_job
-      - install_dependencies
-      - run:
-          command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: us-east-1
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
+      #- run:
+      #    command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: eu-central-1
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
 
   package_service:
     executor: node
@@ -203,28 +205,37 @@ jobs:
         type: string
         default: "true"
     steps:
-      - prepare_job
-      - install_dependencies
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
+      - run: 
+          name: echo parameters.stage
+          command: echo << parameters.stage >>
       - run:
-          command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: us-east-1
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
-      - run: mkdir -p workspace artifacts
-      - run: cp -r package workspace/
-      - run:
-          name: Add fulfillment package to /artifacts
-          command: tar -zcvf ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip ./workspace/package/<< parameters.stage >>
-      - run:
-          name: Create GitHub release and upload artifact
-          command: ./tools/create-github-release.sh ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip << parameters.prerelease >>
-      - store_artifacts:
-          path: artifacts
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - package
+          name: echo parameters.prerelease 
+          command: echo << parameters.prerelease >>
+
+      #- run:
+      #    command: npm run package -- --verbose --package ./package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: eu-central-1
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
+      #- run: mkdir -p workspace artifacts
+      #- run: cp -r package workspace/
+      #- run:
+      #    name: Add fulfillment package to /artifacts
+      #    command: tar -zcvf ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip ./workspace/package/<< parameters.stage >>
+      #- run:
+      #    name: Create GitHub release and upload artifact
+      #    command: ./tools/create-github-release.sh ./artifacts/<< parameters.stage >>_${BUILD_VERSION}.zip << parameters.prerelease >>
+      #- store_artifacts:
+      #    path: artifacts
+      #- persist_to_workspace:
+      #    root: workspace
+      #    paths:
+      #      - package
       - slack_dummy
       #- slack/status:
       #    fail_only: true
@@ -242,18 +253,21 @@ jobs:
       role_arn:
         type: string
     steps:
-      - prepare_job
-      - install_dependencies
+      - run: echo "Prepare job time."
+      - run: echo "Install dependencies time"
+      #- prepare_job
+      #- install_dependencies
       - aws-cli/setup:
           profile-name: default
       - assume_role:
           role_arn: << parameters.role_arn >>
-      - run:
-          command: npm run deploy -- --package ./workspace/package/<< parameters.stage >>/
-          environment:
-            STAGE: << parameters.stage >>
-            REGION: << parameters.region >>
-            SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
+      - run: echo "executing npm run deploy -- --package ./workspace/package/<< parameters.stage >>
+      #- run:
+      #    command: npm run deploy -- --package ./workspace/package/<< parameters.stage >>/
+      #    environment:
+      #      STAGE: << parameters.stage >>
+      #      REGION: << parameters.region >>
+      #      SERVERLESS_DEPLOYMENT_BUCKET: << pipeline.parameters.service-id >>-<< parameters.stage >>
 
   workflow_success:
     executor: node
@@ -363,7 +377,8 @@ workflows:
       - terraform_apply:
           name: terraform_apply-dev
           stage: dev
-          #context:
+          context:
+            - AWS_SETTINGS
             #- aws-vizio-cms-dev
           requires:
             - terraform_plan-dev
