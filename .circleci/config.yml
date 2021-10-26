@@ -34,7 +34,7 @@ executors:
 
 commands:
   slack_dummy:
-      - run: echo "Slack time. Using context VAR: ${SLACK_ID}"
+      - run: echo "Slack time. Using context VAR':'' ${SLACK_ID}"
 
   prepare_slack:
     description: "Prepare Alpine containers for slack notification by installing bash/curl"
