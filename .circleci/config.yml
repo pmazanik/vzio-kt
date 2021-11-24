@@ -328,16 +328,14 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: pwd && ls -la
-      - run: echo $TEXT >> test.log
-      - run: echo $(pwd)
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: pwd && ls -la
       - persist_to_workspace:
           root: workspace
           paths:
-            - ./test.log
+            - ./workspace/test.log
       - run: cat ./workspace/test.log
-      - run: ls -la
+      - run: pwd && ls -la
       #- slack/status
   test2-1:
     executor: node
