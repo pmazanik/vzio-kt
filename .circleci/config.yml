@@ -327,9 +327,9 @@ jobs:
       - run: echo $(pwd)
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
   test2-1:
@@ -344,9 +344,9 @@ jobs:
           at: workspace
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
   test2-2:
@@ -361,9 +361,9 @@ jobs:
           at: workspace
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
   test3-1:
@@ -378,9 +378,9 @@ jobs:
           at: workspace
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
   test3-2:
@@ -395,9 +395,9 @@ jobs:
           at: workspace
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
   test4:
@@ -412,9 +412,9 @@ jobs:
           at: ./workspace
       - run: echo $TEXT >> test.log
       - persist_to_workspace:
-        root: ./workspace
-        paths:
-          - ./workspace
+          root: ./workspace
+          paths:
+            - ./workspace
       - run: cat test.log
       #- slack/status
 
