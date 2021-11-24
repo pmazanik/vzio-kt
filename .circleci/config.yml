@@ -347,7 +347,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - persist_to_workspace:
           root: workspace
           paths:
@@ -365,7 +365,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - persist_to_workspace:
           root: workspace
           paths:
@@ -383,7 +383,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - persist_to_workspace:
           root: workspace
           paths:
@@ -401,7 +401,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - persist_to_workspace:
           root: workspace
           paths:
@@ -418,8 +418,8 @@ jobs:
       TEXT: << parameters.text >>
     steps:
       - attach_workspace:
-          at: ./workspace
-      - run: echo $TEXT >> test.log
+          at: workspace
+      - run: echo $TEXT >> ./workspace/test.log
       - persist_to_workspace:
           root: workspace
           paths:
