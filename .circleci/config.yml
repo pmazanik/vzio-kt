@@ -325,7 +325,7 @@ jobs:
       TEXT: << parameters.text >>
     steps:
       - run: echo $TEXT >> test.log
-      - run: cat ~/workspace/test.log
+      - run: cat ./workspace/test.log
       #- slack/status
   test2-1:
     executor: node
@@ -338,7 +338,7 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: echo $TEXT >> test.log
-      - run: cat ~/workspace/test.log
+      - run: cat ./workspace/test.log
       #- slack/status
   test2-2:
     executor: node
@@ -351,7 +351,7 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: echo $TEXT >> test.log
-      - run: cat ~/workspace/test.log
+      - run: cat ./workspace/test.log
       #- slack/status
   test3-1:
     executor: node
@@ -364,7 +364,7 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: echo $TEXT >> test.log
-      - run: cat ~/workspace/test.log
+      - run: cat ./workspace/test.log
       #- slack/status
   test3-2:
     executor: node
@@ -377,7 +377,7 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: echo $TEXT >> test.log
-      - run: cat ~/workspace/test.log
+      - run: cat ./workspace/test.log
       #- slack/status
   test4:
     executor: node
