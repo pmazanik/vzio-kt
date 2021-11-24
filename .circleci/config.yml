@@ -333,7 +333,7 @@ jobs:
       - persist_to_workspace:
           root: workspace
           paths:
-            - ./workspace/test.log
+            - test.log
       - run: cat ./workspace/test.log
       - run: pwd && ls -la
       #- slack/status
