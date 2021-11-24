@@ -482,6 +482,8 @@ workflows:
       - test1:
           name: test1
           text: test1
+          requires:
+            - init_workflow
       - test2-1:
           name: test2-1
           text: test2-2
