@@ -331,6 +331,7 @@ jobs:
           paths:
             - .
       - run: cat test.log
+      - run: ls -la
       #- slack/status
   test2-1:
     executor: node
@@ -348,6 +349,7 @@ jobs:
           paths:
             - .
       - run: cat test.log
+      - run: ls -la
       #- slack/status
   test2-2:
     executor: node
@@ -365,6 +367,7 @@ jobs:
           paths:
             - .
       - run: cat test.log
+      - run: ls -la
       #- slack/status
   test3-1:
     executor: node
@@ -382,6 +385,7 @@ jobs:
           paths:
             - .
       - run: cat test.log
+      - run: ls -la
       #- slack/status
   test3-2:
     executor: node
@@ -399,6 +403,7 @@ jobs:
           paths:
             - .
       - run: cat test.log
+      - run: ls -la
       #- slack/status
   test4:
     executor: node
