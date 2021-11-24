@@ -506,6 +506,6 @@ workflows:
           name: test4
           text: test4
           requires:
-            - test2-1
-            - test3-1
+            - test2-2
+            - test3-2
 
