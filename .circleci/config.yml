@@ -530,7 +530,7 @@ workflows:
             - init_workflow
       - test2-1:
           name: test2-1
-          text: test2-2
+          text: test2-1
           requires:
             - test1
       - test2-2:
@@ -548,10 +548,10 @@ workflows:
           text: test3-2
           requires:
             - test3-1
-      # - test4:
-      #     name: test4
-      #     text: test4
-      #     requires:
-      #       - test2-2
-      #       - test3-2
+      - test4:
+          name: test4
+          text: test4
+          requires:
+            - test2-2
+            - test3-2
 
