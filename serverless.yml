@@ -1,0 +1,206 @@
+service: consent-management-service
+
+plugins:
+  - serverless-webpack
+  - serverless-openapi-documentation-v2
+  - serverless-plugin-canary-deployments
+package:
+  individually: true
+
+frameworkVersion: ">=2.11.1"
+
+custom:
+  configSecretId: "consent-management-service-${opt:stage}-config-secret"
+  webpack:
+    webpackConfig: 'webpack.config.js'   # Name of webpack configuration file
+    packager: 'npm'   # Packager that will be used to package your external modulesx
+    concurrency: 1
+    includeModules:
+      forceExclude:
+        - aws-sdk
+  documentation: ${file(docs/serverless-api-documentation.yml):custom.documentation}
+
+provider:
+  name: aws
+  deploymentBucket: ${env:SERVERLESS_DEPLOYMENT_BUCKET}
+  runtime: nodejs14.x
+  logRetentionInDays: 365
+  apiGateway:
+    shouldStartNameWithService: false
+  environment:
+    STAGE: ${opt:stage}
+    CONFIG_SECRET_ID: ${self:custom.configSecretId}
+    BUILD_VERSION: ${env:BUILD_VERSION}
+  vpc:
+    securityGroupIds:
+      - ${env:default_sg_id}
+    subnetIds:
+      - ${env:subnet_ids}
+  iamRoleStatements:
+    - Effect: Allow
+      Action: secretsmanager:GetSecretValue
+      Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${self:custom.configSecretId}-*'
+    - Effect: Allow
+      Action:
+        - codedeploy:*
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - ec2:DescribeNetworkInterfaces
+        - ec2:CreateNetworkInterface
+        - ec2:DeleteNetworkInterface
+        - ec2:DescribeInstances
+        - ec2:AttachNetworkInterface
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - elasticache:*
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - lambda:*
+      Resource:
+        - "*"
+
+functions:
+  authorizer:
+    handler: src/handlers/authorizer/index.handler
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  setLambdaAliases:
+    handler: src/handlers/alias-set/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          path: set-alias
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+
+  getServiceInfo:
+    handler: src/handlers/get-service-info/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: get
+          cors: true
+          path: ""
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.getServiceInfo.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  getConsentMessage:
+    handler: src/handlers/get-consent-message/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          cors: true
+          path: get-consent-message
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.getConsentMessage.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  getAllConsentMessages:
+    handler: src/handlers/get-all-consent-messages/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          cors: true
+          path: get-all-consent-messages
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.getAllConsentMessages.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  saveUserConsent:
+    handler: src/handlers/save-user-consent/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          cors: true
+          path: save-user-consent
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.saveUserConsent.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  getAllUserConsents:
+    handler: src/handlers/get-all-user-consents/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          cors: true
+          path: get-all-user-consents
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.getUserConsent.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+  getUserConsent:
+    handler: src/handlers/get-user-consent/index.handler
+    timeout: 5
+    memorySize: 128
+    events:
+      - http:
+          method: post
+          cors: true
+          path: get-user-consent
+          authorizer:
+            name: authorizer
+            identitySource: method.request.header.api-key
+            type: token
+          documentation: ${file(docs/serverless-api-documentation.yml):functions.getUserConsent.documentation}
+    deploymentSettings:
+      type: AllAtOnce
+      alias: Live
+
+resources:
+  Resources:
+    GatewayResponseDefault4XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'

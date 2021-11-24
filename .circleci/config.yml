@@ -316,6 +316,72 @@ jobs:
       - slack_dummy
       #- slack/status:
       #    fail_only: true
+  test1:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
+  test2-1:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
+  test2-2:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
+  test3-1:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
+  test3-2:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
+  test4:
+    executor: node
+    parameters:
+      text:
+        type: string
+    environment:
+      TEXT: << parameters.text >>
+    steps:
+      - run: echo $TEXT >> test.log
+      - run: cat ~/workspace/test.log
+      #- slack/status
 
 workflows:
   feature_branch:
@@ -329,6 +395,7 @@ workflows:
               ignore:
                 - dev
                 - master
+                - test
 
       - test:
           #context:
@@ -405,3 +472,43 @@ workflows:
           name: worflow_finish_notification-dev
           requires:
             - deploy_service-dev
+  test:
+    jobs:
+      - init_workflow:
+          context:
+            - AWS_SETTINGS
+            #- aws-vizio-cms-dev
+          stage: test
+          filters:
+            branches:
+              only: test #Source git branch
+      - test1:
+        name: test1
+        text: test1
+      - test2-1:
+        name: test2-1
+        text: test2-2
+        requires:
+          - test1
+      - test2-2:
+        name: test2-2
+        text: test2-2
+        requires:
+          - test2-1
+      - test3-1:
+        name: test3-1
+        text: test3-1
+        requires:
+          - test1
+      - test3-2:
+        name: test3-2
+        text: test3-2
+        requires:
+          - test3-1
+      - test4:
+        name: test4
+        text: test4
+        requires:
+          - test2-1
+          - test3-1
+
