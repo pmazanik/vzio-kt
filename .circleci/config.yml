@@ -324,7 +324,7 @@ jobs:
     environment:
       TEXT: << parameters.text >>
     steps:
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
   test2-1:
@@ -337,7 +337,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
   test2-2:
@@ -350,7 +350,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
   test3-1:
@@ -363,7 +363,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
   test3-2:
@@ -376,7 +376,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
   test4:
@@ -389,7 +389,7 @@ jobs:
     steps:
       - attach_workspace:
           at: workspace
-      - run: echo $TEXT >> test.log
+      - run: echo $TEXT >> ./workspace/test.log
       - run: cat ~/workspace/test.log
       #- slack/status
 
