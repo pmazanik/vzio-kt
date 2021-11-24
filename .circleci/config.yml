@@ -324,6 +324,7 @@ jobs:
     environment:
       TEXT: << parameters.text >>
     steps:
+      - run: echo $(pwd)
       - run: echo $TEXT >> ./workspace/test.log
       - run: cat ./workspace/test.log
       #- slack/status
@@ -388,7 +389,7 @@ jobs:
       TEXT: << parameters.text >>
     steps:
       - attach_workspace:
-          at: workspace
+          at: ./workspace
       - run: echo $TEXT >> ./workspace/test.log
       - run: cat ~/workspace/test.log
       #- slack/status
