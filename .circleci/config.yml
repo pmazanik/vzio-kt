@@ -324,8 +324,10 @@ jobs:
     environment:
       TEXT: << parameters.text >>
     steps:
+      - run: pwd && ls -la
       - attach_workspace:
           at: workspace
+      - run: pwd && ls -la
       - run: echo $TEXT >> test.log
       - run: echo $(pwd)
       - run: echo $TEXT >> test.log
