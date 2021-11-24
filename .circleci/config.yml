@@ -331,6 +331,7 @@ jobs:
       - run: echo $TEXT >> test.log
       - run: echo $(pwd)
       - run: echo $TEXT >> test.log
+      - run: pwd && ls -la
       - persist_to_workspace:
           root: workspace
           paths:
